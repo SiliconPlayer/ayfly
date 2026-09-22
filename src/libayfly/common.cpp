@@ -355,9 +355,12 @@ AYFLY_API bool ay_songstarted(void *info)
 
 AYFLY_API void ay_startsong(void *info)
 {
-    ((AYSongInfo *)info)->stopping = false;
+    AYSongInfo *song = (AYSongInfo *)info;
+    song->stopping = false;
+    if(!song->player)
+        return;
     if(!ay_songstarted(info))
-        ((AYSongInfo *)info)->player->Start();
+        song->player->Start();
 }
 
 AYFLY_API void ay_stopsong(void *info)
