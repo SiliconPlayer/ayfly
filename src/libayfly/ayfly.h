@@ -313,9 +313,9 @@ AYFLY_API void *ay_initsong(TFileName FilePath, unsigned long sr, AbstractAudio 
  */
 
 #ifndef __SYMBIAN32__
-AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player = 0);
+AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player = 0, const AY_CHAR *type = 0);
 #else
-AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player = 0);
+AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player = 0, const AY_CHAR *type = 0);
 #endif
 
 /*

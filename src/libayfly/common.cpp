@@ -128,14 +128,16 @@ AYFLY_API void *ay_initsong(TFileName FilePath, unsigned long sr, AbstractAudio 
 }
 
 #ifndef __SYMBIAN32__
-AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player)
+AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player, const AY_CHAR *type)
 #else
-AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player)
+AYFLY_API void *ay_initsongindirect(unsigned char *module, unsigned long sr, unsigned long size, AbstractAudio *player, const AY_CHAR *type)
 #endif
 {
     AYSongInfo *info = ay_sys_getnewinfo();
     if(!info)
         return 0;
+    if(type)
+        info->FilePath = type;
     info->file_len = size;
     info->module_len = size;
     unsigned long to_allocate = size < 65536 ? 65536 : size;
