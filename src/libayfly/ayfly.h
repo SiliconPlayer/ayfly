@@ -213,6 +213,8 @@ struct AYSongInfo
 	bool empty_song; /* true, if empty song */
 	EMPTY_CALLBACK empty_callback;
 	AYWRITE_CALLBACK aywrite_callback;
+    unsigned long subsong; /* selected subsong */
+    unsigned long subsong_count; /* subsongs in the file, 0 when unknown */
     ~AYSongInfo();
 };
 
@@ -516,6 +518,25 @@ AYFLY_API unsigned long ay_getelapsedtime(void *info);
  */
 
 AYFLY_API unsigned long ay_getsongloop(void *info);
+
+/*
+ * Gets the number of subsongs in the file, 1 when the format has no subsongs
+ */
+
+AYFLY_API unsigned long ay_getsubsongcount(void *info);
+
+/*
+ * Gets the subsong currently selected for playback
+ */
+
+AYFLY_API unsigned long ay_getsubsong(void *info);
+
+/*
+ * Selects subsong @subsong and rewinds the player to its start.
+ * Returns false when @subsong is out of range
+ */
+
+AYFLY_API bool ay_setsubsong(void *info, unsigned long subsong);
 
 /*
  * Gets pointer to array of 15 bytes - AY register buffer.

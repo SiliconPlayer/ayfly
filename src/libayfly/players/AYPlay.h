@@ -169,7 +169,12 @@ void AY_Init(AYSongInfo &info)
             }
             aydata.filelen = info.file_len;
             aydata.filedata = info.file_data;
-            AY_initayfmt(info, aydata, 0);
+            if(info.subsong_count == 0)
+                info.subsong = aydata.first_track;
+            info.subsong_count = aydata.num_tracks;
+            if(info.subsong >= aydata.num_tracks)
+                info.subsong = 0;
+            AY_initayfmt(info, aydata, (unsigned char)info.subsong);
             delete[] aydata.tracks;
             aydata.tracks = 0;
         }
@@ -225,10 +230,15 @@ void AY_GetInfo(AYSongInfo &info)
             }
             if(aydata_loc.num_tracks)
             {
-                info.Length = aydata_loc.tracks[0].fadestart;
+                if(info.subsong_count == 0)
+                    info.subsong = aydata_loc.first_track;
+                info.subsong_count = aydata_loc.num_tracks;
+                if(info.subsong >= aydata_loc.num_tracks)
+                    info.subsong = 0;
+                info.Length = aydata_loc.tracks[info.subsong].fadestart;
                 if(!info.Length)
                     info.Length = 3000 * 3;
-                info.Name = ay_sys_getstr(aydata_loc.tracks[0].name, strlen((char *)aydata_loc.tracks[0].name));
+                info.Name = ay_sys_getstr(aydata_loc.tracks[info.subsong].name, strlen((char *)aydata_loc.tracks[info.subsong].name));
                 info.Author = ay_sys_getstr(aydata_loc.author, strlen((char *)aydata_loc.author));
             }
 

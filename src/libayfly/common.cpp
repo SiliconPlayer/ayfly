@@ -51,6 +51,8 @@ AYSongInfo *ay_sys_getnewinfo()
     info->chip_type = 0;
     info->own_player = true;
     info->stopping = false;
+    info->subsong = 0;
+    info->subsong_count = 0;
     info->player_num = -1;
     info->int_counter = 0;
     info->int_limit = 0;
@@ -388,6 +390,30 @@ AYFLY_API unsigned long ay_getelapsedtime(void *info)
 AYFLY_API unsigned long ay_getsongloop(void *info)
 {
     return ((AYSongInfo *)info)->Loop;
+}
+
+AYFLY_API unsigned long ay_getsubsongcount(void *info)
+{
+    AYSongInfo *song = (AYSongInfo *)info;
+    return song->subsong_count ? song->subsong_count : 1;
+}
+
+AYFLY_API unsigned long ay_getsubsong(void *info)
+{
+    return ((AYSongInfo *)info)->subsong;
+}
+
+AYFLY_API bool ay_setsubsong(void *info, unsigned long subsong)
+{
+    AYSongInfo *song = (AYSongInfo *)info;
+    if(subsong >= ay_getsubsongcount(info))
+        return false;
+    if(song->subsong == subsong)
+        return true;
+    song->subsong = subsong;
+    ay_resetsong(info);
+    ay_sys_getsonginfoindirect(*song);
+    return true;
 }
 
 AYFLY_API const unsigned char *ay_getregs(void *info, unsigned char chip_num)
