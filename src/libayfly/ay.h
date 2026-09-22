@@ -79,13 +79,13 @@ public:
         switch(chnl)
         {
             case 0:
-                chnl_mute0 = !mute;
+                chnl_mute0 = mute;
                 break;
             case 1:
-                chnl_mute1 = !mute;
+                chnl_mute1 = mute;
                 break;
             case 2:
-                chnl_mute2 = !mute;
+                chnl_mute2 = mute;
                 break;
             default:
                 break;
