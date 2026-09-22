@@ -561,6 +561,12 @@ AYFLY_API const unsigned char *ay_getregs(void *info, unsigned char chip_num = 0
 AYFLY_API void ay_getchannelscope(void *info, unsigned char channel, float *dest, unsigned long max_samples);
 
 /*
+ * Returns the current output level of @channel in chip DAC units, 0 when
+ * muted. Channels 0-2 are chip 0, channels 3-5 chip 1 (turbo sound).
+ */
+AYFLY_API float ay_getchannellevel(void *info, unsigned char channel);
+
+/*
  * Used for render song AY chip @chip_num into buffer pointed by @buffer
  * with size @buffer_length bytes
  */

@@ -19,6 +19,7 @@
  ***************************************************************************/
 
 #include "ayfly.h"
+#include <math.h>
 
 #define TACTS_MULT (unsigned long)800
 #define VOL_BEEPER (15000)
@@ -101,6 +102,7 @@ void ay::SetParameters(AYSongInfo *_songinfo)
     if(int_limit_f - int_limit >= 0.5)
         int_limit++;
     frame_size = songinfo->sr / songinfo->int_freq;
+    mix_dc_alpha = 1.0 - exp(-1.0 / (2.0 * songinfo->sr));
     if(songinfo->is_z80)
     {
         float z80_per_sample_f = ((float)songinfo->z80_freq * TACTS_MULT) / songinfo->sr / ay_tacts_f;
@@ -152,6 +154,7 @@ void ay::ayReset()
     beeper_oldval = false;
     scope_pos = 0;
     scope_written = 0;
+    mix_dc_left = mix_dc_right = 0;
 
     SetParameters(0);
     setEnvelope();
@@ -351,11 +354,29 @@ inline void ay::ayStep(float &s0, float &s1, float &s2)
         s2 = (CHNL_ENVELOPE(2) ? ay::levels[env_vol] : ay::levels[CHNL_VOLUME(2) * 2]) * volume2;
 }
 
+float ay::channelLevel(unsigned long ch)
+{
+    if(chnlMuted(ch))
+        return 0;
+    return (CHNL_ENVELOPE(ch) ? levels[env_vol] : levels[CHNL_VOLUME(ch) * 2]) * GetVolume(ch);
+}
+
+float ay::tapBaseline(unsigned long ch)
+{
+    float duty = 1;
+    if(!((regs[AY_MIXER] >> ch) & 1))        // tone running
+        duty *= 0.5f;
+    if(!((regs[AY_MIXER] >> (3 + ch)) & 1))  // noise running
+        duty *= 0.5f;
+    return duty * channelLevel(ch);
+}
+
 void ay::scopeTap(float a, float b, float c)
 {
-    scope_ring[0][scope_pos] = a;
-    scope_ring[1][scope_pos] = b;
-    scope_ring[2][scope_pos] = c;
+    // Centered taps: register state gives the DC exactly, no estimator.
+    scope_ring[0][scope_pos] = a - tapBaseline(0);
+    scope_ring[1][scope_pos] = b - tapBaseline(1);
+    scope_ring[2][scope_pos] = c - tapBaseline(2);
     if(++scope_pos >= AY_SCOPE_RING_SAMPLES)
         scope_pos = 0;
     if(scope_written < AY_SCOPE_RING_SAMPLES)
@@ -492,8 +513,10 @@ unsigned long ay::ayProcess(unsigned char *stream, unsigned long len)
             scopeTap(tap0, tap1, tap2);
             if(songinfo->is_ts)
                 songinfo->ay8910[1].scopeTap(tap3, tap4, tap5);
-            stream16[i] = left;
-            stream16[i + 1] = right;
+            mix_dc_left += mix_dc_alpha * (left - mix_dc_left);
+            mix_dc_right += mix_dc_alpha * (right - mix_dc_right);
+            stream16[i] = left - mix_dc_left;
+            stream16[i + 1] = right - mix_dc_right;
             i += 2;
         }
         flt_state += TACTS_MULT;

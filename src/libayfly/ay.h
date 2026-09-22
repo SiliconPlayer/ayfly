@@ -154,6 +154,7 @@ public:
     // Per-channel scope taps written at the output rate.
     void scopeTap(float a, float b, float c);
     void copyScopeRing(unsigned char chnl, float *dest, unsigned long max_samples);
+    float channelLevel(unsigned long ch);
 
     void SetParameters(AYSongInfo *_songinfo = 0);
     void ayBeeper(bool on);
@@ -195,6 +196,7 @@ private:
     long int_per_z80_counter;
     unsigned long frame_size;
     void ayStep(float &s0, float &s1, float &s2);
+    float tapBaseline(unsigned long ch);
     static const init_mix_levels mix_levels[];
     AYMixTypes mix_levels_nr;
     float a_left, a_right, b_left, b_right, c_left, c_right;
@@ -212,6 +214,9 @@ private:
     float scope_ring[3][AY_SCOPE_RING_SAMPLES];
     unsigned long scope_pos;
     unsigned long scope_written;
+    // Audio DC blocker: ayfly mixes unipolar DAC levels into the output.
+    double mix_dc_left = 0, mix_dc_right = 0;
+    double mix_dc_alpha = 0;
 };
 
 #endif /*AY_H_*/

@@ -436,6 +436,14 @@ AYFLY_API void ay_getchannelscope(void *info, unsigned char channel, float *dest
     song->ay8910[channel / 3].copyScopeRing((unsigned char)(channel % 3), dest, max_samples);
 }
 
+AYFLY_API float ay_getchannellevel(void *info, unsigned char channel)
+{
+    AYSongInfo *song = (AYSongInfo *)info;
+    if(!song || channel >= 3 * NUMBER_OF_AYS)
+        return 0;
+    return song->ay8910[channel / 3].channelLevel(channel % 3);
+}
+
 AYFLY_API unsigned long ay_rendersongbuffer(void *info, unsigned char *buffer, unsigned long buffer_length)
 {
     return ((AYSongInfo *)info)->ay8910[0].ayProcess(buffer, buffer_length);
