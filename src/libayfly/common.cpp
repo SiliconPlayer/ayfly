@@ -285,12 +285,13 @@ AYFLY_API void ay_seeksong(void *info, long new_position)
 AYFLY_API void ay_resetsong(void *info)
 {
     AYSongInfo *song = (AYSongInfo *)info;
-    if(!song->player)
-        return;
     song->stopping = false;
-    bool started = song->player->Started();
-    if(started)
-        song->player->Stop();
+    if(song->player)
+    {
+        bool started = song->player->Started();
+        if(started)
+            song->player->Stop();
+    }
     song->timeElapsed = 0;
     ay_sys_initsong(*song);
 
