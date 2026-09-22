@@ -423,6 +423,19 @@ AYFLY_API const unsigned char *ay_getregs(void *info, unsigned char chip_num)
     return ((AYSongInfo *)info)->ay8910[chip_num].GetRegs();
 }
 
+AYFLY_API void ay_getchannelscope(void *info, unsigned char channel, float *dest, unsigned long max_samples)
+{
+    if(!dest || !max_samples)
+        return;
+    AYSongInfo *song = (AYSongInfo *)info;
+    if(!song || channel >= 3 * NUMBER_OF_AYS)
+    {
+        memset(dest, 0, max_samples * sizeof(float));
+        return;
+    }
+    song->ay8910[channel / 3].copyScopeRing((unsigned char)(channel % 3), dest, max_samples);
+}
+
 AYFLY_API unsigned long ay_rendersongbuffer(void *info, unsigned char *buffer, unsigned long buffer_length)
 {
     return ((AYSongInfo *)info)->ay8910[0].ayProcess(buffer, buffer_length);

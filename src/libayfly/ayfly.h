@@ -553,6 +553,14 @@ AYFLY_API bool ay_setsubsong(void *info, unsigned long subsong);
 AYFLY_API const unsigned char *ay_getregs(void *info, unsigned char chip_num = 0);
 
 /*
+ * Copies the newest @max_samples output-rate channel taps into @dest,
+ * oldest first, zero-padded while the ring fills. Channels 0-2 are chip
+ * 0, channels 3-5 chip 1 (turbo sound). Values are chip DAC units.
+ */
+
+AYFLY_API void ay_getchannelscope(void *info, unsigned char channel, float *dest, unsigned long max_samples);
+
+/*
  * Used for render song AY chip @chip_num into buffer pointed by @buffer
  * with size @buffer_length bytes
  */

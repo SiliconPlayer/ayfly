@@ -24,6 +24,7 @@
 #include <assert.h>
 
 #define AY_TEMP_BUFFER_SIZE 4096
+#define AY_SCOPE_RING_SAMPLES 32768
 
 enum
 {
@@ -150,6 +151,10 @@ public:
     void SetMixType(AYMixTypes mixType);
     AYMixTypes GetMixType(void);
 
+    // Per-channel scope taps written at the output rate.
+    void scopeTap(float a, float b, float c);
+    void copyScopeRing(unsigned char chnl, float *dest, unsigned long max_samples);
+
     void SetParameters(AYSongInfo *_songinfo = 0);
     void ayBeeper(bool on);
 	unsigned long chip_nr;
@@ -203,6 +208,10 @@ private:
     //beeper stuff
     float beeper_volume;
     bool beeper_oldval;
+
+    float scope_ring[3][AY_SCOPE_RING_SAMPLES];
+    unsigned long scope_pos;
+    unsigned long scope_written;
 };
 
 #endif /*AY_H_*/

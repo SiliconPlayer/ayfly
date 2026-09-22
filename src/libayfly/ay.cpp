@@ -150,6 +150,8 @@ void ay::ayReset()
 
     beeper_volume = 0;
     beeper_oldval = false;
+    scope_pos = 0;
+    scope_written = 0;
 
     SetParameters(0);
     setEnvelope();
@@ -349,6 +351,30 @@ inline void ay::ayStep(float &s0, float &s1, float &s2)
         s2 = (CHNL_ENVELOPE(2) ? ay::levels[env_vol] : ay::levels[CHNL_VOLUME(2) * 2]) * volume2;
 }
 
+void ay::scopeTap(float a, float b, float c)
+{
+    scope_ring[0][scope_pos] = a;
+    scope_ring[1][scope_pos] = b;
+    scope_ring[2][scope_pos] = c;
+    if(++scope_pos >= AY_SCOPE_RING_SAMPLES)
+        scope_pos = 0;
+    if(scope_written < AY_SCOPE_RING_SAMPLES)
+        scope_written++;
+}
+
+void ay::copyScopeRing(unsigned char chnl, float *dest, unsigned long max_samples)
+{
+    if(chnl >= 3 || !dest || !max_samples)
+        return;
+    unsigned long avail = scope_written < max_samples ? scope_written : max_samples;
+    unsigned long pad = max_samples - avail;
+    memset(dest, 0, pad * sizeof(float));
+    // Newest at the end; zero pad fills the front.
+    unsigned long idx = (scope_pos + AY_SCOPE_RING_SAMPLES - avail) % AY_SCOPE_RING_SAMPLES;
+    for(unsigned long i = 0; i < avail; i++, idx = (idx + 1) % AY_SCOPE_RING_SAMPLES)
+        dest[pad + i] = scope_ring[chnl][idx];
+}
+
 unsigned long ay::ayProcess(unsigned char *stream, unsigned long len)
 {
     unsigned long to_process = (len >> 1);
@@ -439,10 +465,15 @@ unsigned long ay::ayProcess(unsigned char *stream, unsigned long len)
         if((chnl_trigger2 | TONE_ENABLE(2)) & (noise_trigger | NOISE_ENABLE(2)) & !chnl_mute2)
             s2 = (CHNL_ENVELOPE(2) ? ay::levels[env_vol] : ay::levels[CHNL_VOLUME(2) * 2]) * volume2;
 
+        float tap0 = s0, tap1 = s1, tap2 = s2;
+        float tap3 = 0, tap4 = 0, tap5 = 0;
         if(songinfo->is_ts)
         {
             float s3, s4, s5;
             songinfo->ay8910[1].ayStep(s3, s4, s5);
+            tap3 = s3;
+            tap4 = s4;
+            tap5 = s5;
             s0 = (s0 + s3) / 2;
             s1 = (s1 + s4) / 2;
             s2 = (s2 + s5) / 2;
@@ -458,6 +489,9 @@ unsigned long ay::ayProcess(unsigned char *stream, unsigned long len)
         if(flt_state > flt_state_limit)
         {
             flt_state -= flt_state_limit;
+            scopeTap(tap0, tap1, tap2);
+            if(songinfo->is_ts)
+                songinfo->ay8910[1].scopeTap(tap3, tap4, tap5);
             stream16[i] = left;
             stream16[i + 1] = right;
             i += 2;
