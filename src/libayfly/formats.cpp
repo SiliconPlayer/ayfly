@@ -145,6 +145,14 @@ static const _Players Players[] =
 { TXT(".sqt"), SQT_Init, SQT_Play, SQT_Cleanup, SQT_GetInfo, SQT_Detect, false },
 { TXT(".pt1"), PT1_Init, PT1_Play, PT1_Cleanup, PT1_GetInfo, PT1_Detect, false } };
 
+AYFLY_API const AY_CHAR *ay_getsongformat(void *info)
+{
+    AYSongInfo *song = (AYSongInfo *)info;
+    if(!song || song->player_num < 0 || song->player_num >= (long)sizeof_array(Players))
+        return TXT("");
+    return Players[song->player_num].ext.c_str();
+}
+
 #ifndef __SYMBIAN32__
 bool ay_sys_format_supported(AY_TXT_TYPE filePath)
 #else

@@ -400,6 +400,13 @@ AYFLY_API const AY_CHAR *ay_getsongpath(void *info);
 #else
 AYFLY_API TFileName ay_getsongpath(void *info);
 #endif
+
+/*
+ * Gets the extension of the player that recognized the song,
+ * e.g. L".pt3"; empty when the song was not detected
+ */
+AYFLY_API const AY_CHAR *ay_getsongformat(void *info);
+
 /*
  * execute one quant of z80 code, or soft player code.
  * Used only in ay emulator and song positioning
