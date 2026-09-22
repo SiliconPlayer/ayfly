@@ -49,6 +49,8 @@ void VTX_Init(AYSongInfo &info)
 
     ay_setchiptype(&info, info.chip_type);
     ay_setayfreq(&info, VTX_ChipFrq);
+    if(header->InterFrq > 0)
+        ay_setintfreq(&info, header->InterFrq); // 0 skips SetParameters in ay.cpp
 
     if(info.module != 0)
     {
