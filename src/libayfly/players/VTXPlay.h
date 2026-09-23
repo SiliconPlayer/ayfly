@@ -25,6 +25,27 @@ struct VTX_SongInfo
 
 #define VTX ((VTX_SongInfo *)info.data)
 
+// Register dumps are 14 bytes/tick; 16 MB is ~6.5 h at 50 Hz.
+#define VTX_MAX_UNPACK_SIZE (16UL * 1024 * 1024)
+
+// Corrupt VTX headers carry no NUL before EOF, so bound every string walk.
+static unsigned long vtx_strnlen(const unsigned char *p, const AYSongInfo &info)
+{
+    if(p < info.file_data || (unsigned long)(p - info.file_data) >= info.file_len)
+        return 0;
+    const unsigned long avail = info.file_len - (unsigned long)(p - info.file_data);
+    const void *nul = memchr(p, 0, avail);
+    return nul ? (unsigned long)((const unsigned char *)nul - p) : avail;
+}
+
+// Poison the header copy so GetInfo yields a zero-length, inert song.
+static void vtx_invalidate(AYSongInfo &info)
+{
+    VTX_File *header = (VTX_File *)info.file_data;
+    header->UnpackSize0 = header->UnpackSize1 = header->UnpackSize2 = header->UnpackSize3 = 0;
+    header->Loop0 = header->Loop1 = 0;
+}
+
 void VTX_Init(AYSongInfo &info)
 {
     unsigned char *module = info.file_data;
@@ -47,10 +68,40 @@ void VTX_Init(AYSongInfo &info)
     else
         info.chip_type = 1;
 
+    // A corrupt UnpackSize would allocate gigabytes or desync VTX_Play's
+    // stride math; reject instead of trusting the header.
+    if(info.file_len < sizeof(VTX_File) || VTX_UnpackSize == 0 ||
+        VTX_UnpackSize > VTX_MAX_UNPACK_SIZE || (VTX_UnpackSize % 14) != 0)
+    {
+        vtx_invalidate(info);
+        return;
+    }
+
     ay_setchiptype(&info, info.chip_type);
     ay_setayfreq(&info, VTX_ChipFrq);
     if(header->InterFrq > 0)
         ay_setintfreq(&info, header->InterFrq); // 0 skips SetParameters in ay.cpp
+
+    unsigned char *p = info.file_data + sizeof(VTX_File);
+    unsigned long slen = vtx_strnlen(p, info);
+    p += slen + 1;
+    slen = vtx_strnlen(p, info);
+    p += slen + 1;
+    if((VTX_Id == 0x7961) || (VTX_Id == 0x6d79))
+    {
+        slen = vtx_strnlen(p, info);
+        p += slen + 1;
+        slen = vtx_strnlen(p, info);
+        p += slen + 1;
+        slen = vtx_strnlen(p, info);
+        p += slen + 1;
+    }
+    // file_len - offset underflows in ay_sys_decodelha past this point.
+    if((unsigned long)(p - info.file_data) >= info.file_len)
+    {
+        vtx_invalidate(info);
+        return;
+    }
 
     if(info.module != 0)
     {
@@ -58,20 +109,6 @@ void VTX_Init(AYSongInfo &info)
         info.module_len = VTX_UnpackSize * 2;
         info.module = new unsigned char[info.module_len];
         memset(info.module, 0, info.module_len);
-    }
-    unsigned char *p = info.file_data + sizeof(VTX_File);
-    int len = strlen((const char *)p);
-    p += len + 1;
-    len = strlen((const char *)p);
-    p += len + 1;
-    if((VTX_Id == 0x7961) || (VTX_Id == 0x6d79))
-    {
-        len = strlen((const char *)p);
-        p += len + 1;
-        len = strlen((const char *)p);
-        p += len + 1;
-        len = strlen((const char *)p);
-        p += len + 1;
     }
     ay_sys_decodelha(info, p - info.file_data);
 }
@@ -133,21 +170,21 @@ void VTX_GetInfo(AYSongInfo &info)
     info.Length = VTX_UnpackSize / 14;
     info.Loop = VTX_Loop;
     unsigned char *p = info.file_data + sizeof(VTX_File);
-    int len = strlen((const char *)p);
+    int len = vtx_strnlen(p, info);
     info.Name = ay_sys_getstr(p, len);
     p += len + 1;
-    len = strlen((const char *)p);
+    len = vtx_strnlen(p, info);
     info.Author = ay_sys_getstr(p, len);
     p += len + 1;
     if((VTX_Id == 0x7961) || (VTX_Id == 0x6d79))
     {
-        len = strlen((const char *)p);
+        len = vtx_strnlen(p, info);
         info.PrgName = ay_sys_getstr(p, len);
         p += len + 1;
-        len = strlen((const char *)p);
+        len = vtx_strnlen(p, info);
         info.TrackName = ay_sys_getstr(p, len);
         p += len + 1;
-        len = strlen((const char *)p);
+        len = vtx_strnlen(p, info);
         info.CompName = ay_sys_getstr(p, len);
         p += len + 1;
     }
