@@ -57,7 +57,10 @@ case "$host_os" in
 *) unix=yes
 
 		if test "$with_audio" = "yes" ; then
-			AM_PATH_SDL
+			dnl Expands at m4 time even under --without-audio, so guard
+			dnl hosts bootstrapping without SDL 1.2 development files.
+			m4_ifdef([AM_PATH_SDL], [AM_PATH_SDL],
+				[AC_MSG_ERROR([sdl.m4 not found; install SDL 1.2 development files])])
 			if test "x$SDL_LIBS" = x0; then
 				AC_ERROR([SDL libraries cannot be found...!])
 			fi
