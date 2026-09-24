@@ -444,6 +444,27 @@ AYFLY_API float ay_getchannellevel(void *info, unsigned char channel)
     return song->ay8910[channel / 3].channelLevel(channel % 3);
 }
 
+AYFLY_API void ay_getbeeperscope(void *info, float *dest, unsigned long max_samples)
+{
+    AYSongInfo *song = (AYSongInfo *)info;
+    if(!song || !dest || !max_samples)
+        return;
+    song->ay8910[0].copyScopeRing(3, dest, max_samples);
+}
+
+AYFLY_API float ay_getbeeperlevel(void *info)
+{
+    AYSongInfo *song = (AYSongInfo *)info;
+    return song ? song->ay8910[0].beeperLevel() : 0;
+}
+
+AYFLY_API void ay_setbeepermuted(void *info, bool muted)
+{
+    AYSongInfo *song = (AYSongInfo *)info;
+    if(song)
+        song->ay8910[0].setBeeperMuted(muted);
+}
+
 AYFLY_API unsigned long ay_rendersongbuffer(void *info, unsigned char *buffer, unsigned long buffer_length)
 {
     return ((AYSongInfo *)info)->ay8910[0].ayProcess(buffer, buffer_length);

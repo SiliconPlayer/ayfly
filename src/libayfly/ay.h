@@ -152,9 +152,11 @@ public:
     AYMixTypes GetMixType(void);
 
     // Per-channel scope taps written at the output rate.
-    void scopeTap(float a, float b, float c);
+    void scopeTap(float a, float b, float c, float beeper);
     void copyScopeRing(unsigned char chnl, float *dest, unsigned long max_samples);
     float channelLevel(unsigned long ch);
+    float beeperLevel() const;
+    void setBeeperMuted(bool muted);
 
     void SetParameters(AYSongInfo *_songinfo = 0);
     void ayBeeper(bool on);
@@ -210,8 +212,10 @@ private:
     //beeper stuff
     float beeper_volume;
     bool beeper_oldval;
+    bool beeper_used;
+    bool beeper_muted;
 
-    float scope_ring[3][AY_SCOPE_RING_SAMPLES];
+    float scope_ring[4][AY_SCOPE_RING_SAMPLES];
     unsigned long scope_pos;
     unsigned long scope_written;
     // Audio DC blocker: ayfly mixes unipolar DAC levels into the output.

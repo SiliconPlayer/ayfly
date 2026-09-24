@@ -152,6 +152,8 @@ void ay::ayReset()
 
     beeper_volume = 0;
     beeper_oldval = false;
+    beeper_used = false;
+    beeper_muted = false;
     scope_pos = 0;
     scope_written = 0;
     mix_dc_left = mix_dc_right = 0;
@@ -371,12 +373,13 @@ float ay::tapBaseline(unsigned long ch)
     return duty * channelLevel(ch);
 }
 
-void ay::scopeTap(float a, float b, float c)
+void ay::scopeTap(float a, float b, float c, float beeper)
 {
     // Centered taps: register state gives the DC exactly, no estimator.
     scope_ring[0][scope_pos] = a - tapBaseline(0);
     scope_ring[1][scope_pos] = b - tapBaseline(1);
     scope_ring[2][scope_pos] = c - tapBaseline(2);
+    scope_ring[3][scope_pos] = beeper;
     if(++scope_pos >= AY_SCOPE_RING_SAMPLES)
         scope_pos = 0;
     if(scope_written < AY_SCOPE_RING_SAMPLES)
@@ -385,7 +388,7 @@ void ay::scopeTap(float a, float b, float c)
 
 void ay::copyScopeRing(unsigned char chnl, float *dest, unsigned long max_samples)
 {
-    if(chnl >= 3 || !dest || !max_samples)
+    if(chnl >= 4 || !dest || !max_samples)
         return;
     unsigned long avail = scope_written < max_samples ? scope_written : max_samples;
     unsigned long pad = max_samples - avail;
@@ -503,16 +506,20 @@ unsigned long ay::ayProcess(unsigned char *stream, unsigned long len)
         if(songinfo->stopping)
             break;
 
-        float left = s0 * a_left + s1 * b_left + s2 * c_left + beeper_volume;
-        float right = s0 * a_right + s1 * b_right + s2 * c_right + beeper_volume;
+        const float beeperMix = beeper_muted ? 0.0f : beeper_volume;
+        float left = s0 * a_left + s1 * b_left + s2 * c_left + beeperMix;
+        float right = s0 * a_right + s1 * b_right + s2 * c_right + beeperMix;
 
         flt.Process2(left, right);
         if(flt_state > flt_state_limit)
         {
             flt_state -= flt_state_limit;
-            scopeTap(tap0, tap1, tap2);
+            const float beeperTap = beeper_muted || !beeper_used
+                ? 0.0f
+                : beeper_volume + (VOL_BEEPER * 0.5f);
+            scopeTap(tap0, tap1, tap2, beeperTap);
             if(songinfo->is_ts)
-                songinfo->ay8910[1].scopeTap(tap3, tap4, tap5);
+                songinfo->ay8910[1].scopeTap(tap3, tap4, tap5, 0.0f);
             mix_dc_left += mix_dc_alpha * (left - mix_dc_left);
             mix_dc_right += mix_dc_alpha * (right - mix_dc_right);
             stream16[i] = left - mix_dc_left;
@@ -525,8 +532,21 @@ unsigned long ay::ayProcess(unsigned char *stream, unsigned long len)
     return (i << 1);
 }
 
+float ay::beeperLevel() const
+{
+    if(beeper_muted || !beeper_oldval)
+        return 0;
+    return VOL_BEEPER;
+}
+
+void ay::setBeeperMuted(bool muted)
+{
+    beeper_muted = muted;
+}
+
 void ay::ayBeeper(bool on)
 {
+    beeper_used = true;
     if(beeper_oldval == on)
         return;
     beeper_volume = on ? -VOL_BEEPER : 0;

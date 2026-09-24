@@ -566,6 +566,15 @@ AYFLY_API void ay_getchannelscope(void *info, unsigned char channel, float *dest
  */
 AYFLY_API float ay_getchannellevel(void *info, unsigned char channel);
 
+/* Copies the Amiga beeper scope tap into @dest. */
+AYFLY_API void ay_getbeeperscope(void *info, float *dest, unsigned long max_samples);
+
+/* Returns the current Amiga beeper level in DAC units. */
+AYFLY_API float ay_getbeeperlevel(void *info);
+
+/* Mutes the Amiga beeper output and its scope tap. */
+AYFLY_API void ay_setbeepermuted(void *info, bool muted);
+
 /*
  * Used for render song AY chip @chip_num into buffer pointed by @buffer
  * with size @buffer_length bytes
