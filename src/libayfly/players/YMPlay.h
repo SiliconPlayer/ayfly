@@ -49,6 +49,24 @@ struct YM_SongInfo
 
 void YM6i_Play(AYSongInfo &info);
 
+//Parses the YM3!/YM3b! header: sets Length (frames) and Loop; returns false for other versions
+bool YM3_ParseHeader(AYSongInfo &info, unsigned char *module, unsigned long ym_data_size)
+{
+    if(memcmp((char *)module, "YM3!", 4)) return false;
+    if(!memcmp((char *)module, "YM3b!", 5) && ym_data_size > 4 + 11 + 4 &&
+       !memcmp(module + ym_data_size - 11, "End Of File", 11))
+    {
+        unsigned long loop;
+        ym_data_size -= 11;
+        loop = ((unsigned long)module [ym_data_size] << 24) | ((unsigned long)module [ym_data_size + 1] << 16) |
+               ((unsigned long)module [ym_data_size + 2] << 8) | module [ym_data_size + 3];
+        ym_data_size -= 4;
+        if(loop < (ym_data_size - 4) / 14) info.Loop = loop;
+    }
+    info.Length = (ym_data_size - 4) / 14;
+    return true;
+}
+
 void YM_Init(AYSongInfo &info)
 {
     unsigned char *module = info.file_data;
@@ -64,6 +82,7 @@ void YM_Init(AYSongInfo &info)
         return;
     YM->Position_In_YM = 0;
     YM->YM_Offset = 0;
+    unsigned long ym_data_size = info.module_len;
 
     if(!memcmp(lzh_header->Method, "-lh5-", 5))
     {
@@ -77,6 +96,7 @@ void YM_Init(AYSongInfo &info)
         info.module = new unsigned char[info.module_len];
         memset(info.module, 0, info.module_len);
         ay_sys_decodelha(info, lzh_header->HSize + 2);
+        ym_data_size = LZH_UCompSize;
     }
     module = info.module;
     YM5FileHeader *ym5_header = (YM5FileHeader *)module;
@@ -115,6 +135,12 @@ void YM_Init(AYSongInfo &info)
         
         if((module [19] & 1) != 0)
             info.play_proc = YM6i_Play;
+    }
+    else if(YM3_ParseHeader(info, module, ym_data_size))
+    {
+        YM->YM_Offset = 4;
+        info.play_proc = YM6i_Play; //YM6i_Play is the generic sequential 14-byte-frame player
+        ay_setayfreq(&info, 2000000); //YM2149F clock on the Atari ST, where YM3 tunes come from
     }
 
 }
@@ -182,6 +208,7 @@ bool YM_Detect(unsigned char *module, unsigned long length)
 void YM_GetInfo(AYSongInfo &info)
 {    
     unsigned char *module = info.file_data;
+    unsigned long ym_data_size = info.module_len;
     LZHFileHeader *header = (LZHFileHeader *)module;
     if(!memcmp(header->Method, "-lh5-", 5))
     {
@@ -195,7 +222,13 @@ void YM_GetInfo(AYSongInfo &info)
         info.module = new unsigned char[LZH_UCompSize * 2];
         memset(info.module, 0, LZH_UCompSize * 2);
         ay_sys_decodelha(info, lzh_header->HSize + 2);
+        ym_data_size = LZH_UCompSize;
         module = info.module;
+    }
+    if(YM3_ParseHeader(info, module, ym_data_size))
+    {
+        ((YM_SongInfo *)info.data)->YM_Offset = 4;
+        return;
     }
     YM5FileHeader *ym5_header = (YM5FileHeader *)module;
     info.Length = YM5_Num_of_tiks;
